@@ -4,230 +4,377 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Montagem de Horário - Pedagogia</title>
+    
+    <!-- Bibliotecas externas: Fonte Inter, SheetJS (Excel) e Lucide Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
     <style>
+        :root {
+            /* Paleta de Cores Elegantes & Pastéis */
+            --bg-page: #f8fafc;
+            --bg-panel: #ffffff;
+            --text-main: #334155;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            
+            /* Tons Pastéis para Botões e Chips */
+            --pastel-mint: #d1fae5;
+            --text-mint: #065f46;
+            
+            --pastel-blue: #dbeafe;
+            --text-blue: #1e3a8a;
+            
+            --pastel-yellow: #fef08a;
+            --text-yellow: #854d0e;
+            
+            --pastel-lilac: #ede9fe;
+            --text-lilac: #5b21b6;
+            
+            --pastel-rose: #ffe4e6;
+            --text-rose: #9f1239;
+            
+            --pastel-gray: #f1f5f9;
+            --text-gray: #475569;
+            
+            --chip-discipline: #e0f2fe;
+            --chip-discipline-border: #bae6fd;
+            --chip-discipline-text: #0369a1;
+
+            --chip-teacher: #dcfce7;
+            --chip-teacher-border: #bbf7d0;
+            --chip-teacher-text: #166534;
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Inter', sans-serif;
             margin: 0;
             padding: 20px;
-            background-color: #f8f9fa;
+            background-color: var(--bg-page);
+            color: var(--text-main);
             display: flex;
             flex-direction: column;
             height: 100vh;
             box-sizing: border-box;
         }
+
         h1, h2 {
             margin-top: 0;
-            color: #333;
+            color: var(--text-main);
+            font-weight: 600;
         }
+        
+        h2 {
+            font-size: 1.1rem;
+            margin-bottom: 16px;
+            border-bottom: 2px solid var(--pastel-gray);
+            padding-bottom: 8px;
+        }
+
         .header-title {
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 24px;
+            font-size: 1.5rem;
+            letter-spacing: -0.02em;
         }
+
         .controls-top {
             display: flex;
             justify-content: center;
+            align-items: center;
             flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 20px;
+            gap: 12px;
+            margin-bottom: 24px;
         }
+
+        .divider {
+            height: 24px;
+            width: 1px;
+            background-color: #cbd5e1;
+            margin: 0 4px;
+        }
+
         .filter-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
             padding: 8px 16px;
-            border: 1px solid #ced4da;
-            background: #fff;
+            border: 1px solid transparent;
+            background: var(--bg-panel);
             cursor: pointer;
-            border-radius: 4px;
-            font-size: 14px;
+            border-radius: 8px;
+            font-size: 13px;
             font-weight: 500;
-            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+            color: var(--text-gray);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            transition: all 0.2s ease;
         }
+
         .filter-btn:hover {
-            background: #e9ecef;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         }
-        .filter-btn.active {
-            background: #007bff;
-            color: #fff;
-            border-color: #007bff;
-        }
+
+        /* Cores Específicas dos Botões */
+        .btn-tab { border: 1px solid var(--border-color); }
+        .btn-tab.active { background: var(--text-main); color: white; border-color: var(--text-main); }
+        
+        .btn-auto { background: var(--pastel-mint); color: var(--text-mint); }
+        .btn-export { background: var(--pastel-blue); color: var(--text-blue); }
+        .btn-download { background: var(--pastel-yellow); color: var(--text-yellow); }
+        .btn-upload { background: var(--pastel-lilac); color: var(--text-lilac); }
+        .btn-clear { background: var(--pastel-rose); color: var(--text-rose); }
+
+        .filter-btn i { width: 16px; height: 16px; }
+
         .app-container {
             display: flex;
             flex: 1;
-            gap: 20px;
+            gap: 24px;
             overflow: hidden;
         }
+
         .sidebar {
             width: 280px;
-            background: #ffffff;
-            padding: 15px;
+            background: var(--bg-panel);
+            padding: 20px;
             overflow-y: auto;
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.02);
         }
+
         .main-panel {
             flex: 1;
             display: flex;
             flex-direction: column;
             overflow-y: auto;
-            background: #ffffff;
-            padding: 20px;
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            background: var(--bg-panel);
+            padding: 24px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.02);
         }
+
         .grid-table {
             width: 100%;
-            border-collapse: collapse;
+            border-collapse: separate;
+            border-spacing: 0;
             margin-bottom: 30px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
         }
+
         .grid-table th, .grid-table td {
-            border: 1px solid #ced4da;
-            padding: 10px;
+            border-right: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px;
             vertical-align: top;
         }
+        
+        .grid-table th:last-child, .grid-table td:last-child { border-right: none; }
+        .grid-table tr:last-child td { border-bottom: none; }
+
         .grid-table th {
-            background: #e9ecef;
+            background: var(--pastel-gray);
             text-align: center;
+            font-weight: 500;
+            font-size: 14px;
+            color: var(--text-gray);
         }
+
         .grid-table td:first-child {
-            background: #f8f9fa;
-            font-weight: bold;
+            background: #fdfdfd;
+            font-weight: 600;
             text-align: center;
             vertical-align: middle;
             width: 100px;
+            color: var(--text-gray);
         }
+
         .schedule-cell {
             min-height: 100px;
             min-width: 120px;
             background: #ffffff;
-            transition: background 0.2s;
+            transition: all 0.2s;
         }
+
         .schedule-cell.dragover {
-            background: #d4edda;
-            border: 2px dashed #28a745;
+            background: var(--pastel-mint);
+            box-shadow: inset 0 0 0 2px #34d399;
         }
+
         .draggable-item {
-            padding: 10px;
-            margin-bottom: 8px;
-            border: 1px solid #adb5bd;
+            padding: 12px;
+            margin-bottom: 10px;
+            border: 1px solid var(--border-color);
             cursor: grab;
             font-size: 13px;
-            border-radius: 6px;
+            border-radius: 8px;
             background-color: #fff;
-            transition: transform 0.1s, box-shadow 0.1s;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
-        .draggable-item:active {
-            cursor: grabbing;
-        }
-        .draggable-item.discipline {
-            border-left: 4px solid #007bff;
-        }
-        .draggable-item.teacher {
-            border-left: 4px solid #28a745;
-        }
+        
+        .draggable-item i { width: 14px; height: 14px; color: var(--text-muted); flex-shrink: 0; }
+
+        .draggable-item:active { cursor: grabbing; }
+
+        .draggable-item.discipline { border-left: 4px solid #38bdf8; }
+        .draggable-item.teacher { border-left: 4px solid #4ade80; }
+
         .draggable-item:hover {
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            transform: translateY(-2px);
         }
+
         .period-group {
-            font-weight: bold;
-            margin-top: 15px;
-            margin-bottom: 8px;
-            color: #495057;
-            border-bottom: 2px solid #e9ecef;
-            padding-bottom: 4px;
+            font-weight: 600;
+            font-size: 13px;
+            margin-top: 20px;
+            margin-bottom: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
+
         .chip {
-            display: inline-block;
-            padding: 6px 10px;
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 12px;
             margin: 4px;
-            border-radius: 16px;
+            border-radius: 20px;
             font-size: 12px;
             font-weight: 500;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
             word-break: break-word;
             max-width: 90%;
             cursor: grab;
+            line-height: 1.4;
         }
-        .chip:active {
-            cursor: grabbing;
-        }
+
+        .chip:active { cursor: grabbing; }
+
         .chip.discipline {
-            background: #cce5ff;
-            color: #004085;
-            border: 1px solid #b8daff;
+            background: var(--chip-discipline);
+            color: var(--chip-discipline-text);
+            border: 1px solid var(--chip-discipline-border);
         }
+
         .chip.teacher {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
+            background: var(--chip-teacher);
+            color: var(--chip-teacher-text);
+            border: 1px solid var(--chip-teacher-border);
         }
-        .chip span {
-            margin-left: 8px;
+
+        .chip-close {
+            margin-left: 6px;
             cursor: pointer;
-            color: #dc3545;
-            font-weight: bold;
+            color: inherit;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+            display: flex;
+            align-items: center;
         }
-        .chip span:hover {
-            color: #721c24;
-        }
+
+        .chip-close:hover { opacity: 1; }
+        .chip-close svg { width: 14px; height: 14px; }
+
         .summary-table {
             width: 100%;
             border-collapse: collapse;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
         }
+
         .summary-table th, .summary-table td {
-            border: 1px solid #ced4da;
-            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+            padding: 14px;
             text-align: left;
-        }
-        .summary-table th {
-            background: #e9ecef;
-        }
-        .instructions {
             font-size: 14px;
-            color: #6c757d;
-            margin-bottom: 15px;
         }
+        
+        .summary-table tr:last-child td { border-bottom: none; }
+
+        .summary-table th {
+            background: var(--pastel-gray);
+            font-weight: 500;
+            color: var(--text-gray);
+        }
+
+        .instructions {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
         .auto-save-msg {
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
             margin-left: 10px;
             font-size: 13px;
-            color: #28a745;
-            font-weight: bold;
+            color: var(--text-mint);
+            font-weight: 500;
             opacity: 0;
             transition: opacity 0.5s;
+            background: var(--pastel-mint);
+            padding: 6px 12px;
+            border-radius: 20px;
         }
+        
+        .auto-save-msg svg { width: 14px; height: 14px; }
     </style>
 </head>
 <body>
 
-    <h1 class="header-title">Montagem de Horário Interativa - Pedagogia (Multiplataforma)</h1>
+    <h1 class="header-title">Montagem de Horário Interativa - Pedagogia</h1>
     
     <div class="controls-top">
-        <button id="btn-all" class="filter-btn active" onclick="filterSemester('all')">Todos os Períodos</button>
-        <button id="btn-impar" class="filter-btn" onclick="filterSemester('impar')">Semestre Ímpar</button>
-        <button id="btn-par" class="filter-btn" onclick="filterSemester('par')">Semestre Par</button>
+        <button id="btn-all" class="filter-btn btn-tab active" onclick="filterSemester('all')">Todos os Períodos</button>
+        <button id="btn-impar" class="filter-btn btn-tab" onclick="filterSemester('impar')">Semestre Ímpar</button>
+        <button id="btn-par" class="filter-btn btn-tab" onclick="filterSemester('par')">Semestre Par</button>
         
-        <div style="border-left: 2px solid #ccc; margin: 0 10px;"></div>
+        <div class="divider"></div>
         
-        <button class="filter-btn" style="background:#28a745;color:white;border:none;" onclick="importDisciplines()" title="Lança as disciplinas nas colunas livres">Auto-Completar</button>
-        <button class="filter-btn" style="background:#17a2b8;color:white;border:none;" onclick="exportToExcel()">Exportar XLSX</button>
+        <button class="filter-btn btn-auto" onclick="importDisciplines()" title="Lança as disciplinas nas colunas livres">
+            <i data-lucide="wand-2"></i> Auto-Completar
+        </button>
+        <button class="filter-btn btn-export" onclick="exportToExcel()">
+            <i data-lucide="file-spreadsheet"></i> Exportar XLSX
+        </button>
         
-        <div style="border-left: 2px solid #ccc; margin: 0 10px;"></div>
+        <div class="divider"></div>
 
-        <!-- Novos botões de Save/Load cruzado -->
-        <button class="filter-btn" style="background:#ffc107;color:#333;border:none;" onclick="exportProgress()" title="Baixa o seu progresso num arquivo pequeno para abrir no celular ou em outro PC">Baixar Progresso (.json)</button>
-        <button class="filter-btn" style="background:#6f42c1;color:white;border:none;" onclick="importProgress()" title="Carrega um arquivo .json salvo anteriormente">Carregar Progresso</button>
-        <button class="filter-btn" style="background:#dc3545;color:white;border:none;" onclick="clearMemory()">Limpar Tudo</button>
+        <button class="filter-btn btn-download" onclick="exportProgress()" title="Baixa o seu progresso num arquivo pequeno (.json)">
+            <i data-lucide="download"></i> Baixar Progresso
+        </button>
+        <button class="filter-btn btn-upload" onclick="importProgress()" title="Carrega um arquivo .json salvo anteriormente">
+            <i data-lucide="upload"></i> Carregar Progresso
+        </button>
+        <button class="filter-btn btn-clear" onclick="clearMemory()">
+            <i data-lucide="trash-2"></i> Limpar Tudo
+        </button>
         
-        <span id="save-msg" class="auto-save-msg">✓ Salvo no navegador local</span>
+        <span id="save-msg" class="auto-save-msg">
+            <i data-lucide="check-circle-2"></i> Salvo localmente
+        </span>
     </div>
 
     <div class="app-container">
         <!-- Disciplinas -->
         <div class="sidebar" id="disciplines-sidebar">
-            <h2>Disciplinas (Q. 8)</h2>
-            <div class="instructions">Arraste as disciplinas para o quadro.</div>
+            <h2>Disciplinas</h2>
+            <div class="instructions"><i data-lucide="info"></i> Arraste para o quadro</div>
             <div id="disciplines-container"></div>
         </div>
 
@@ -251,17 +398,17 @@
                 </tbody>
             </table>
 
-            <h2>Resumo por Docente</h2>
+            <h2 style="margin-top: 20px;">Resumo por Docente</h2>
             <table class="summary-table">
                 <thead>
                     <tr>
                         <th>Docente</th>
                         <th>Disciplinas Alocadas</th>
-                        <th>Carga Horária Total (CH)</th>
+                        <th>Carga Horária Total</th>
                     </tr>
                 </thead>
                 <tbody id="summary-body">
-                    <tr><td colspan="3" style="text-align:center; color:#6c757d;">Arraste disciplinas e professores para o quadro para gerar o resumo.</td></tr>
+                    <tr><td colspan="3" style="text-align:center; color: var(--text-muted);">Arraste disciplinas e professores para o quadro para gerar o resumo.</td></tr>
                 </tbody>
             </table>
         </div>
@@ -269,12 +416,18 @@
         <!-- Professores -->
         <div class="sidebar" id="teachers-sidebar">
             <h2>Docentes</h2>
-            <div class="instructions">Arraste os professores para o quadro.</div>
+            <div class="instructions"><i data-lucide="info"></i> Arraste para o quadro</div>
             <div id="teachers-container"></div>
         </div>
     </div>
 
     <script>
+        // Inicializar ícones Lucide
+        lucide.createIcons();
+
+        // SVG ícone de fechar (usado em elementos gerados dinamicamente via JS)
+        const closeIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`;
+
         const disciplinas = [
             { p: 1, nome: "Metodologia da Produção Científica e Acadêmica", ch: 80 },
             { p: 1, nome: "Introdução à Educação, à Psicologia e a Sociologia", ch: 80 },
@@ -330,7 +483,6 @@
             "Profª. Drª Márcia Moret",
             "Prof. Dr. Luciano Magalhães",
             "Prof. Dr. Hugo Fotopoulos",
-            "Prof. Dr. Rodrigo Moreira",
             "Prof. Substituto"
         ];
 
@@ -357,7 +509,7 @@
                         const el = document.createElement('div');
                         el.className = 'draggable-item discipline';
                         el.draggable = true;
-                        el.textContent = `${d.nome} (${d.ch}h)`;
+                        el.innerHTML = `<i data-lucide="book-open"></i> <span>${d.nome} (${d.ch}h)</span>`;
                         el.dataset.type = 'discipline';
                         el.dataset.name = d.nome;
                         el.dataset.ch = d.ch;
@@ -366,6 +518,7 @@
                     });
                 }
             }
+            lucide.createIcons();
         }
 
         const teachContainer = document.getElementById('teachers-container');
@@ -373,7 +526,7 @@
             const el = document.createElement('div');
             el.className = 'draggable-item teacher';
             el.draggable = true;
-            el.textContent = t;
+            el.innerHTML = `<i data-lucide="user"></i> <span>${t}</span>`;
             el.dataset.type = 'teacher';
             el.dataset.name = t;
             el.dataset.ch = 0; 
@@ -399,7 +552,7 @@
         }
 
         function filterSemester(type) {
-            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.btn-tab').forEach(btn => btn.classList.remove('active'));
             document.getElementById('btn-' + type).classList.add('active');
 
             renderDisciplines(type);
@@ -433,14 +586,15 @@
             let label = name;
             if(type === 'discipline') label += ` (${ch}h)`;
 
-            chip.innerHTML = `${label} <span onclick="this.parentElement.remove(); updateSummary(); saveToLocalStorage();" title="Remover">&times;</span>`;
+            chip.innerHTML = `${label} <span class="chip-close" onclick="this.parentElement.remove(); updateSummary(); saveToLocalStorage();" title="Remover">${closeIconSvg}</span>`;
             return chip;
         }
 
         function dragStartFromSidebar(ev) {
-            ev.dataTransfer.setData("type", ev.target.dataset.type);
-            ev.dataTransfer.setData("name", ev.target.dataset.name);
-            ev.dataTransfer.setData("ch", ev.target.dataset.ch);
+            const target = ev.target.closest('.draggable-item') || ev.target;
+            ev.dataTransfer.setData("type", target.dataset.type);
+            ev.dataTransfer.setData("name", target.dataset.name);
+            ev.dataTransfer.setData("ch", target.dataset.ch);
             ev.dataTransfer.setData("isNew", "true");
         }
 
@@ -527,16 +681,18 @@
         }
 
         function clearGrid() {
-            if(!confirm("Tem certeza que deseja limpar a grade e apagar os dados salvos no navegador?")) return;
+            if(!confirm("Tem certeza que deseja limpar as células das linhas que estão sendo exibidas?")) return;
             
             const rows = document.querySelectorAll('#grid-body tr');
             rows.forEach(row => {
-                const cells = row.querySelectorAll('.schedule-cell');
-                cells.forEach(cell => cell.innerHTML = '');
+                if (row.style.display !== 'none') {
+                    const cells = row.querySelectorAll('.schedule-cell');
+                    cells.forEach(cell => cell.innerHTML = '');
+                }
             });
             
             updateSummary();
-            localStorage.removeItem('pedagogiaScheduleState');
+            saveToLocalStorage();
         }
 
         function updateSummary() {
@@ -584,7 +740,7 @@
             }
 
             if (!hasEntries) {
-                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#6c757d;">Nenhum docente com disciplinas alocadas.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color: var(--text-muted);">Nenhum docente com disciplinas alocadas.</td></tr>';
             }
         }
 
@@ -648,7 +804,6 @@
             XLSX.writeFile(wb, "Horarios_Pedagogia_UNIR.xlsx");
         }
 
-        // --- Lógica de Salvamento e Exportação de Progresso (.json) ---
         let saveTimeout;
         
         function saveToLocalStorage() {
@@ -761,14 +916,19 @@
                 updateSummary();
                 
                 const msg = document.getElementById('save-msg');
-                msg.textContent = "Memória apagada!";
-                msg.style.color = "#dc3545";
+                msg.innerHTML = '<i data-lucide="alert-circle"></i> Memória apagada!';
+                msg.style.color = "var(--text-rose)";
+                msg.style.background = "var(--pastel-rose)";
                 msg.style.opacity = 1;
+                lucide.createIcons();
+                
                 setTimeout(() => {
                     msg.style.opacity = 0;
                     setTimeout(() => {
-                        msg.textContent = "✓ Salvo no navegador local";
-                        msg.style.color = "#28a745";
+                        msg.innerHTML = '<i data-lucide="check-circle-2"></i> Salvo localmente';
+                        msg.style.color = "var(--text-mint)";
+                        msg.style.background = "var(--pastel-mint)";
+                        lucide.createIcons();
                     }, 500);
                 }, 2000);
             }
