@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Montagem de Horário - Pedagogia</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+        h1, h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        .header-title {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .controls-top {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .filter-btn {
+            padding: 8px 16px;
+            border: 1px solid #ced4da;
+            background: #fff;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .filter-btn:hover {
+            background: #e9ecef;
+        }
+        .filter-btn.active {
+            background: #007bff;
+            color: #fff;
+            border-color: #007bff;
+        }
+        .app-container {
+            display: flex;
+            flex: 1;
+            gap: 20px;
+            overflow: hidden;
+        }
+        .sidebar {
+            width: 280px;
+            background: #ffffff;
+            padding: 15px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .main-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            background: #ffffff;
+            padding: 20px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .grid-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        .grid-table th, .grid-table td {
+            border: 1px solid #ced4da;
+            padding: 10px;
+            vertical-align: top;
+        }
+        .grid-table th {
+            background: #e9ecef;
+            text-align: center;
+        }
+        .grid-table td:first-child {
+            background: #f8f9fa;
+            font-weight: bold;
+            text-align: center;
+            vertical-align: middle;
+            width: 100px;
+        }
+        .schedule-cell {
+            min-height: 100px;
+            min-width: 120px;
+            background: #ffffff;
+            transition: background 0.2s;
+        }
+        .schedule-cell.dragover {
+            background: #d4edda;
+            border: 2px dashed #28a745;
+        }
+        .draggable-item {
+            padding: 10px;
+            margin-bottom: 8px;
+            border: 1px solid #adb5bd;
+            cursor: grab;
+            font-size: 13px;
+            border-radius: 6px;
+            background-color: #fff;
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+        .draggable-item:active {
+            cursor: grabbing;
+        }
+        .draggable-item.discipline {
+            border-left: 4px solid #007bff;
+        }
+        .draggable-item.teacher {
+            border-left: 4px solid #28a745;
+        }
+        .draggable-item:hover {
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transform: translateY(-1px);
+        }
+        .period-group {
+            font-weight: bold;
+            margin-top: 15px;
+            margin-bottom: 8px;
+            color: #495057;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 4px;
+        }
+        .chip {
+            display: inline-block;
+            padding: 6px 10px;
+            margin: 4px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 500;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            word-break: break-word;
+            max-width: 90%;
+            cursor: grab;
+        }
+        .chip:active {
+            cursor: grabbing;
+        }
+        .chip.discipline {
+            background: #cce5ff;
+            color: #004085;
+            border: 1px solid #b8daff;
+        }
+        .chip.teacher {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .chip span {
+            margin-left: 8px;
+            cursor: pointer;
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .chip span:hover {
+            color: #721c24;
+        }
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .summary-table th, .summary-table td {
+            border: 1px solid #ced4da;
+            padding: 12px;
+            text-align: left;
+        }
+        .summary-table th {
+            background: #e9ecef;
+        }
+        .instructions {
+            font-size: 14px;
+            color: #6c757d;
+            margin-bottom: 15px;
+        }
+        .auto-save-msg {
+            display: inline-block;
+            margin-left: 10px;
+            font-size: 13px;
+            color: #28a745;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+    </style>
+</head>
+<body>
+
+    <h1 class="header-title">Montagem de Horário Interativa - Pedagogia (Multiplataforma)</h1>
+    
+    <div class="controls-top">
+        <button id="btn-all" class="filter-btn active" onclick="filterSemester('all')">Todos os Períodos</button>
+        <button id="btn-impar" class="filter-btn" onclick="filterSemester('impar')">Semestre Ímpar</button>
+        <button id="btn-par" class="filter-btn" onclick="filterSemester('par')">Semestre Par</button>
+        
+        <div style="border-left: 2px solid #ccc; margin: 0 10px;"></div>
+        
+        <button class="filter-btn" style="background:#28a745;color:white;border:none;" onclick="importDisciplines()" title="Lança as disciplinas nas colunas livres">📥 Auto-Completar</button>
+        <button class="filter-btn" style="background:#17a2b8;color:white;border:none;" onclick="exportToExcel()">📊 Exportar XLSX</button>
+        
+        <div style="border-left: 2px solid #ccc; margin: 0 10px;"></div>
+
+        <!-- Novos botões de Save/Load cruzado -->
+        <button class="filter-btn" style="background:#ffc107;color:#333;border:none;" onclick="exportProgress()" title="Baixa o seu progresso num arquivo pequeno para abrir no celular ou em outro PC">💾 Baixar Progresso (.json)</button>
+        <button class="filter-btn" style="background:#6f42c1;color:white;border:none;" onclick="importProgress()" title="Carrega um arquivo .json salvo anteriormente">📂 Carregar Progresso</button>
+        <button class="filter-btn" style="background:#dc3545;color:white;border:none;" onclick="clearMemory()">🧹 Limpar Tudo</button>
+        
+        <span id="save-msg" class="auto-save-msg">✓ Salvo no navegador local</span>
+    </div>
+
+    <div class="app-container">
+        <!-- Disciplinas -->
+        <div class="sidebar" id="disciplines-sidebar">
+            <h2>Disciplinas (Q. 8)</h2>
+            <div class="instructions">Arraste as disciplinas para o quadro.</div>
+            <div id="disciplines-container"></div>
+        </div>
+
+        <!-- Quadro Principal -->
+        <div class="main-panel">
+            <h2>Quadro de Horários</h2>
+            <table class="grid-table">
+                <thead>
+                    <tr>
+                        <th>Período</th>
+                        <th>2ª feira</th>
+                        <th>3ª feira</th>
+                        <th>4ª feira</th>
+                        <th>5ª feira</th>
+                        <th>6ª feira</th>
+                        <th>Sábado</th>
+                    </tr>
+                </thead>
+                <tbody id="grid-body">
+                    <!-- Gerado dinamicamente -->
+                </tbody>
+            </table>
+
+            <h2>Resumo por Docente</h2>
+            <table class="summary-table">
+                <thead>
+                    <tr>
+                        <th>Docente</th>
+                        <th>Disciplinas Alocadas</th>
+                        <th>Carga Horária Total (CH)</th>
+                    </tr>
+                </thead>
+                <tbody id="summary-body">
+                    <tr><td colspan="3" style="text-align:center; color:#6c757d;">Arraste disciplinas e professores para o quadro para gerar o resumo.</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Professores -->
+        <div class="sidebar" id="teachers-sidebar">
+            <h2>Docentes</h2>
+            <div class="instructions">Arraste os professores para o quadro.</div>
+            <div id="teachers-container"></div>
+        </div>
+    </div>
+
+    <script>
+        const disciplinas = [
+            { p: 1, nome: "Metodologia da Produção Científica e Acadêmica", ch: 80 },
+            { p: 1, nome: "Introdução à Educação, à Psicologia e a Sociologia", ch: 80 },
+            { p: 1, nome: "Filosofia da Educação", ch: 80 },
+            { p: 1, nome: "História da Educação Brasileira", ch: 80 },
+            { p: 1, nome: "Sociologia da Educação", ch: 80 },
+            { p: 2, nome: "Matemática Básica e Estatística", ch: 80 },
+            { p: 2, nome: "Língua Portuguesa", ch: 80 },
+            { p: 2, nome: "Educação Infantil", ch: 80 },
+            { p: 2, nome: "Psicologia da Aprendizagem", ch: 80 },
+            { p: 2, nome: "Tema Integrador ou Optativa (2º)", ch: 80 },
+            { p: 3, nome: "Formação Étnico-Cultural Brasileira", ch: 80 },
+            { p: 3, nome: "Epistemologia da Educação", ch: 80 },
+            { p: 3, nome: "Libras", ch: 80 },
+            { p: 3, nome: "Currículos e Programas", ch: 80 },
+            { p: 3, nome: "Psicomotricidade", ch: 80 },
+            { p: 3, nome: "Didática", ch: 80 },
+            { p: 4, nome: "Fundamentos e Prática da Educação Infantil", ch: 80 },
+            { p: 4, nome: "Tema Integrador ou Optativa (4º)", ch: 80 },
+            { p: 4, nome: "Metodologia da Pesquisa em Educação", ch: 80 },
+            { p: 4, nome: "Neurociência e Problemas de Aprendizagem", ch: 80 },
+            { p: 5, nome: "Educação de Jovens e Adultos (EJA)", ch: 80 },
+            { p: 5, nome: "Fund. e Prát. do Ensino da Língua Portuguesa", ch: 80 },
+            { p: 5, nome: "Fund. e Prát. de Alfabetização", ch: 80 },
+            { p: 5, nome: "Política e Legislação Educacional", ch: 80 },
+            { p: 5, nome: "Estágio Supervisionado Obrigatório I", ch: 100 },
+            { p: 6, nome: "Fund. e Prát. Ensino de História e Geografia", ch: 80 },
+            { p: 6, nome: "Fund. e Prát. Ensino de Matemática", ch: 80 },
+            { p: 6, nome: "Fund. e Prát. Ensino de Ed. Física, Recr. e Jogos", ch: 80 },
+            { p: 6, nome: "Gestão Educacional", ch: 80 },
+            { p: 6, nome: "Estágio Supervisionado Obrigatório II", ch: 100 },
+            { p: 7, nome: "Fund. e Prát. Ensino de Arte-Educação", ch: 80 },
+            { p: 7, nome: "Fund. e Prát. Ensino de Ciências", ch: 80 },
+            { p: 7, nome: "Educação Especial", ch: 80 },
+            { p: 7, nome: "Educação do Campo e Desenv. Sustentável", ch: 80 },
+            { p: 7, nome: "Estágio Supervisionado Obrigatório III", ch: 100 },
+            { p: 7, nome: "Avaliação da Aprendizagem", ch: 80 },
+            { p: 8, nome: "Atividades Complementares", ch: 200 },
+            { p: 8, nome: "Tema Integrador ou Optativa (8º)", ch: 80 },
+            { p: 8, nome: "TCC-Monografia", ch: 160 },
+            { p: 8, nome: "Estágio Supervisionado Obrigatório IV", ch: 100 }
+        ];
+
+        const professores = [
+            "Prof. Dr. Bruno Figueiredo",
+            "Profª. Drª Maria Máximo",
+            "Prof. Dr. Ederson Lauri",
+            "Profª. Drª Adailde Miranda",
+            "Profª. Drª Maria Norma",
+            "Profª. Drª Cláudia Justus",
+            "Prof. Dr. Fernando Sérgio",
+            "Prof. Dr. Wendell Fiori",
+            "Profª. Drª Márcia Moret",
+            "Prof. Dr. Luciano Magalhães",
+            "Prof. Substituto"
+        ];
+
+        function generateId() {
+            return 'chip-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
+        }
+
+        function renderDisciplines(filterType) {
+            const discContainer = document.getElementById('disciplines-container');
+            discContainer.innerHTML = '';
+            
+            for (let i = 1; i <= 8; i++) {
+                if (filterType === 'impar' && i % 2 === 0) continue;
+                if (filterType === 'par' && i % 2 !== 0) continue;
+
+                const group = disciplinas.filter(d => d.p === i);
+                if (group.length > 0) {
+                    const header = document.createElement('div');
+                    header.className = 'period-group';
+                    header.textContent = i + 'º Período';
+                    discContainer.appendChild(header);
+
+                    group.forEach(d => {
+                        const el = document.createElement('div');
+                        el.className = 'draggable-item discipline';
+                        el.draggable = true;
+                        el.textContent = `${d.nome} (${d.ch}h)`;
+                        el.dataset.type = 'discipline';
+                        el.dataset.name = d.nome;
+                        el.dataset.ch = d.ch;
+                        el.ondragstart = dragStartFromSidebar;
+                        discContainer.appendChild(el);
+                    });
+                }
+            }
+        }
+
+        const teachContainer = document.getElementById('teachers-container');
+        professores.forEach(t => {
+            const el = document.createElement('div');
+            el.className = 'draggable-item teacher';
+            el.draggable = true;
+            el.textContent = t;
+            el.dataset.type = 'teacher';
+            el.dataset.name = t;
+            el.dataset.ch = 0; 
+            el.ondragstart = dragStartFromSidebar;
+            teachContainer.appendChild(el);
+        });
+
+        const gridBody = document.getElementById('grid-body');
+        for (let i = 1; i <= 8; i++) {
+            const tr = document.createElement('tr');
+            tr.dataset.period = i;
+            tr.innerHTML = `<td>${i}º Período</td>`;
+            for(let j=0; j<6; j++){
+                const td = document.createElement('td');
+                td.className = 'schedule-cell';
+                td.ondrop = drop;
+                td.ondragover = allowDrop;
+                td.ondragenter = dragEnter;
+                td.ondragleave = dragLeave;
+                tr.appendChild(td);
+            }
+            gridBody.appendChild(tr);
+        }
+
+        function filterSemester(type) {
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('btn-' + type).classList.add('active');
+
+            renderDisciplines(type);
+
+            const rows = document.querySelectorAll('#grid-body tr');
+            rows.forEach(row => {
+                const p = parseInt(row.dataset.period);
+                if (type === 'impar' && p % 2 === 0) {
+                    row.style.display = 'none';
+                } else if (type === 'par' && p % 2 !== 0) {
+                    row.style.display = 'none';
+                } else {
+                    row.style.display = '';
+                }
+            });
+        }
+
+        function createChipElement(type, name, ch, id = null) {
+            const chip = document.createElement('div');
+            chip.className = `chip ${type}`;
+            chip.dataset.type = type;
+            chip.dataset.name = name;
+            chip.dataset.ch = ch;
+            chip.id = id || generateId();
+            chip.draggable = true;
+            
+            chip.ondragstart = function(e) {
+                e.dataTransfer.setData("sourceId", this.id);
+            };
+            
+            let label = name;
+            if(type === 'discipline') label += ` (${ch}h)`;
+
+            chip.innerHTML = `${label} <span onclick="this.parentElement.remove(); updateSummary(); saveToLocalStorage();" title="Remover">&times;</span>`;
+            return chip;
+        }
+
+        function dragStartFromSidebar(ev) {
+            ev.dataTransfer.setData("type", ev.target.dataset.type);
+            ev.dataTransfer.setData("name", ev.target.dataset.name);
+            ev.dataTransfer.setData("ch", ev.target.dataset.ch);
+            ev.dataTransfer.setData("isNew", "true");
+        }
+
+        function allowDrop(ev) {
+            ev.preventDefault();
+        }
+
+        function dragEnter(ev) {
+            ev.preventDefault();
+            if(ev.target.classList.contains('schedule-cell')) {
+                ev.target.classList.add('dragover');
+            }
+        }
+
+        function dragLeave(ev) {
+            if(ev.target.classList.contains('schedule-cell')) {
+                ev.target.classList.remove('dragover');
+            }
+        }
+
+        function drop(ev) {
+            ev.preventDefault();
+            let target = ev.target;
+            
+            while(target && !target.classList.contains('schedule-cell')) {
+                target = target.parentElement;
+            }
+
+            if(target && target.classList.contains('schedule-cell')) {
+                target.classList.remove('dragover');
+
+                const sourceId = ev.dataTransfer.getData("sourceId");
+
+                if (sourceId) {
+                    const existingChip = document.getElementById(sourceId);
+                    if (existingChip) {
+                        target.appendChild(existingChip);
+                    }
+                } else if (ev.dataTransfer.getData("isNew") === "true") {
+                    const type = ev.dataTransfer.getData("type");
+                    const name = ev.dataTransfer.getData("name");
+                    const ch = ev.dataTransfer.getData("ch");
+
+                    const newChip = createChipElement(type, name, ch);
+                    target.appendChild(newChip);
+                }
+
+                updateSummary();
+                saveToLocalStorage();
+            }
+        }
+
+        function importDisciplines() {
+            const rows = document.querySelectorAll('#grid-body tr');
+            
+            rows.forEach(row => {
+                if (row.style.display !== 'none') {
+                    const period = parseInt(row.dataset.period);
+                    const cells = Array.from(row.querySelectorAll('.schedule-cell'));
+                    
+                    const group = disciplinas.filter(d => d.p === period);
+                    let cellIndex = 0; 
+                    
+                    group.forEach(d => {
+                        let alreadyExists = false;
+                        cells.forEach(c => {
+                            const chips = c.querySelectorAll('.chip.discipline');
+                            chips.forEach(chip => {
+                                if (chip.dataset.name === d.nome) alreadyExists = true;
+                            });
+                        });
+                        
+                        if (!alreadyExists) {
+                            const targetCell = cells[cellIndex % cells.length];
+                            const newChip = createChipElement('discipline', d.nome, d.ch);
+                            targetCell.appendChild(newChip);
+                            cellIndex++; 
+                        }
+                    });
+                }
+            });
+            updateSummary();
+            saveToLocalStorage();
+        }
+
+        function clearGrid() {
+            if(!confirm("Tem certeza que deseja limpar a grade e apagar os dados salvos no navegador?")) return;
+            
+            const rows = document.querySelectorAll('#grid-body tr');
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('.schedule-cell');
+                cells.forEach(cell => cell.innerHTML = '');
+            });
+            
+            updateSummary();
+            localStorage.removeItem('pedagogiaScheduleState');
+        }
+
+        function updateSummary() {
+            const summary = {}; 
+
+            document.querySelectorAll('.schedule-cell').forEach(cell => {
+                const discChips = Array.from(cell.querySelectorAll('.chip.discipline'));
+                const teachChips = Array.from(cell.querySelectorAll('.chip.teacher'));
+
+                teachChips.forEach(tChip => {
+                    const tName = tChip.dataset.name;
+                    if (!summary[tName]) summary[tName] = { discMap: new Map() };
+
+                    discChips.forEach(dChip => {
+                        const dName = dChip.dataset.name;
+                        const dCh = parseInt(dChip.dataset.ch);
+                        summary[tName].discMap.set(dName, dCh);
+                    });
+                });
+            });
+
+            const tbody = document.getElementById('summary-body');
+            tbody.innerHTML = '';
+
+            let hasEntries = false;
+
+            for (const [tName, data] of Object.entries(summary)) {
+                let totalCh = 0;
+                let dNames = [];
+                for (const [dName, ch] of data.discMap.entries()) {
+                    totalCh += ch;
+                    dNames.push(`&bull; ${dName} (${ch}h)`);
+                }
+                
+                if (totalCh > 0) {
+                    hasEntries = true;
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><strong>${tName}</strong></td>
+                        <td>${dNames.join('<br>')}</td>
+                        <td><strong>${totalCh}h</strong></td>
+                    `;
+                    tbody.appendChild(tr);
+                }
+            }
+
+            if (!hasEntries) {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#6c757d;">Nenhum docente com disciplinas alocadas.</td></tr>';
+            }
+        }
+
+        function exportToExcel() {
+            if (typeof XLSX === 'undefined') {
+                alert('A biblioteca de exportação do Excel ainda está carregando ou falhou. Verifique sua conexão.');
+                return;
+            }
+
+            const wb = XLSX.utils.book_new();
+
+            const ws_data_schedule = [
+                ["Período", "2ª feira", "3ª feira", "4ª feira", "5ª feira", "6ª feira", "Sábado"]
+            ];
+
+            const rows = document.querySelectorAll('#grid-body tr');
+            rows.forEach(row => {
+                if (row.style.display !== 'none') {
+                    const rowData = [];
+                    rowData.push(row.querySelector('td').innerText.trim());
+                    
+                    const cells = row.querySelectorAll('.schedule-cell');
+                    cells.forEach(cell => {
+                        const discs = Array.from(cell.querySelectorAll('.chip.discipline')).map(c => c.dataset.name);
+                        const profs = Array.from(cell.querySelectorAll('.chip.teacher')).map(c => c.dataset.name);
+                        
+                        let cellText = "";
+                        if (discs.length > 0) cellText += discs.join(" | ") + "\n";
+                        if (profs.length > 0) cellText += "Docentes: " + profs.join(" | ");
+                        
+                        rowData.push(cellText.trim());
+                    });
+                    ws_data_schedule.push(rowData);
+                }
+            });
+
+            const ws_data_summary = [
+                ["Docente", "Disciplinas Alocadas", "Carga Horária Total (CH)"]
+            ];
+            
+            const summaryRows = document.querySelectorAll('#summary-body tr');
+            summaryRows.forEach(row => {
+                const cols = row.querySelectorAll('td');
+                if (cols.length === 3 && !cols[0].hasAttribute('colspan')) { 
+                    const docente = cols[0].innerText.trim();
+                    const disciplinas = cols[1].innerText.replace(/• /g, '').trim().split('\n').join(', ');
+                    const ch = cols[2].innerText.trim();
+                    ws_data_summary.push([docente, disciplinas, ch]);
+                }
+            });
+
+            const ws_schedule = XLSX.utils.aoa_to_sheet(ws_data_schedule);
+            const ws_summary = XLSX.utils.aoa_to_sheet(ws_data_summary);
+            
+            XLSX.utils.book_append_sheet(wb, ws_schedule, "Grade de Horários");
+            
+            if (ws_data_summary.length > 1) {
+                XLSX.utils.book_append_sheet(wb, ws_summary, "Resumo Docentes");
+            }
+
+            XLSX.writeFile(wb, "Horarios_Pedagogia_UNIR.xlsx");
+        }
+
+        // --- Lógica de Salvamento e Exportação de Progresso (.json) ---
+        let saveTimeout;
+        
+        function saveToLocalStorage() {
+            const gridData = [];
+            const rows = document.querySelectorAll('#grid-body tr');
+            
+            rows.forEach(row => {
+                const rowData = [];
+                const cells = row.querySelectorAll('.schedule-cell');
+                cells.forEach(cell => {
+                    const cellData = [];
+                    cell.querySelectorAll('.chip').forEach(chip => {
+                        cellData.push({
+                            type: chip.dataset.type,
+                            name: chip.dataset.name,
+                            ch: chip.dataset.ch,
+                            id: chip.id
+                        });
+                    });
+                    rowData.push(cellData);
+                });
+                gridData.push(rowData);
+            });
+            
+            localStorage.setItem('pedagogiaScheduleState', JSON.stringify(gridData));
+            
+            const msg = document.getElementById('save-msg');
+            msg.style.opacity = 1;
+            
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => {
+                msg.style.opacity = 0;
+            }, 2000);
+        }
+
+        function loadFromLocalStorage() {
+            const saved = localStorage.getItem('pedagogiaScheduleState');
+            if (saved) {
+                applyStateData(saved);
+            }
+        }
+        
+        function applyStateData(jsonString) {
+            try {
+                const gridData = JSON.parse(jsonString);
+                const rows = document.querySelectorAll('#grid-body tr');
+                
+                gridData.forEach((rowData, rowIndex) => {
+                    if(rows[rowIndex]) {
+                        const cells = rows[rowIndex].querySelectorAll('.schedule-cell');
+                        rowData.forEach((cellData, cellIndex) => {
+                            if(cells[cellIndex]) {
+                                cells[cellIndex].innerHTML = ''; 
+                                cellData.forEach(chipData => {
+                                    const newChip = createChipElement(chipData.type, chipData.name, chipData.ch, chipData.id);
+                                    cells[cellIndex].appendChild(newChip);
+                                });
+                            }
+                        });
+                    }
+                });
+                updateSummary();
+            } catch (e) {
+                alert("Erro ao carregar dados do arquivo. Certifique-se que o arquivo é válido.");
+            }
+        }
+
+        function exportProgress() {
+            saveToLocalStorage();
+            const data = localStorage.getItem('pedagogiaScheduleState');
+            if (!data || data === "[[],[],[],[],[],[],[],[]]") {
+                alert("O quadro está vazio. Não há progresso para salvar.");
+                return;
+            }
+            const blob = new Blob([data], {type: "application/json"});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = "progresso_horario_pedagogia.json";
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importProgress() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = e => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = event => {
+                    const json = event.target.result;
+                    applyStateData(json);
+                    localStorage.setItem('pedagogiaScheduleState', json);
+                    alert("Progresso carregado com sucesso!");
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        function clearMemory() {
+            if(confirm("Isso apagará o horário de forma permanente da tela e da memória local. Deseja continuar?")) {
+                localStorage.removeItem('pedagogiaScheduleState');
+                
+                const cells = document.querySelectorAll('.schedule-cell');
+                cells.forEach(cell => cell.innerHTML = '');
+                
+                updateSummary();
+                
+                const msg = document.getElementById('save-msg');
+                msg.textContent = "Memória apagada!";
+                msg.style.color = "#dc3545";
+                msg.style.opacity = 1;
+                setTimeout(() => {
+                    msg.style.opacity = 0;
+                    setTimeout(() => {
+                        msg.textContent = "✓ Salvo no navegador local";
+                        msg.style.color = "#28a745";
+                    }, 500);
+                }, 2000);
+            }
+        }
+
+        window.onload = function() {
+            renderDisciplines('all');
+            loadFromLocalStorage();
+        };
+    </script>
+</body>
+</html>
