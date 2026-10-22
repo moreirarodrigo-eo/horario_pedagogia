@@ -5,9 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Montagem de Horário - Pedagogia</title>
     
-    <!-- Bibliotecas externas: Fonte Inter, SheetJS (Excel) e Lucide Icons -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Bibliotecas externas: Fonte Inter, SheetJS (Excel), jsPDF, html2canvas, jspdf-autotable e Lucide Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     
     <style>
@@ -123,6 +125,7 @@
         
         .btn-auto { background: var(--pastel-mint); color: var(--text-mint); }
         .btn-export { background: var(--pastel-blue); color: var(--text-blue); }
+        .btn-pdf { background: #fee2e2; color: #991b1b; } 
         .btn-download { background: var(--pastel-yellow); color: var(--text-yellow); }
         .btn-upload { background: var(--pastel-lilac); color: var(--text-lilac); }
         .btn-clear { background: var(--pastel-rose); color: var(--text-rose); }
@@ -341,8 +344,8 @@
     
     <div class="controls-top">
         <button id="btn-all" class="filter-btn btn-tab active" onclick="filterSemester('all')">Todos os Períodos</button>
-        <button id="btn-impar" class="filter-btn btn-tab" onclick="filterSemester('impar')">Semestre Ímpar</button>
-        <button id="btn-par" class="filter-btn btn-tab" onclick="filterSemester('par')">Semestre Par</button>
+        <button id="btn-impar" class="filter-btn btn-tab" onclick="filterSemester('impar')">Semestre Ímpar (1º, 3º, 5º, 7º)</button>
+        <button id="btn-par" class="filter-btn btn-tab" onclick="filterSemester('par')">Semestre Par (2º, 4º, 6º, 8º)</button>
         
         <div class="divider"></div>
         
@@ -351,6 +354,9 @@
         </button>
         <button class="filter-btn btn-export" onclick="exportToExcel()">
             <i data-lucide="file-spreadsheet"></i> Exportar XLSX
+        </button>
+        <button class="filter-btn btn-pdf" onclick="exportToPDF()">
+            <i data-lucide="file-text"></i> Exportar Tabela PDF
         </button>
         
         <div class="divider"></div>
@@ -373,7 +379,7 @@
     <div class="app-container">
         <!-- Disciplinas -->
         <div class="sidebar" id="disciplines-sidebar">
-            <h2>Disciplinas</h2>
+            <h2>Disciplinas (Q. 8)</h2>
             <div class="instructions"><i data-lucide="info"></i> Arraste para o quadro</div>
             <div id="disciplines-container"></div>
         </div>
@@ -381,7 +387,7 @@
         <!-- Quadro Principal -->
         <div class="main-panel">
             <h2>Quadro de Horários</h2>
-            <table class="grid-table">
+            <table class="grid-table" id="horario-table">
                 <thead>
                     <tr>
                         <th>Período</th>
@@ -428,43 +434,51 @@
         // SVG ícone de fechar (usado em elementos gerados dinamicamente via JS)
         const closeIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`;
 
+        // Lista de Disciplinas (8 períodos de Pedagogia)
         const disciplinas = [
             { p: 1, nome: "Metodologia da Produção Científica e Acadêmica", ch: 80 },
             { p: 1, nome: "Introdução à Educação, à Psicologia e a Sociologia", ch: 80 },
             { p: 1, nome: "Filosofia da Educação", ch: 80 },
             { p: 1, nome: "História da Educação Brasileira", ch: 80 },
             { p: 1, nome: "Sociologia da Educação", ch: 80 },
+            
             { p: 2, nome: "Matemática Básica e Estatística", ch: 80 },
             { p: 2, nome: "Língua Portuguesa", ch: 80 },
             { p: 2, nome: "Educação Infantil", ch: 80 },
             { p: 2, nome: "Psicologia da Aprendizagem", ch: 80 },
             { p: 2, nome: "Tema Integrador ou Optativa (2º)", ch: 80 },
+            
             { p: 3, nome: "Formação Étnico-Cultural Brasileira", ch: 80 },
             { p: 3, nome: "Epistemologia da Educação", ch: 80 },
             { p: 3, nome: "Libras", ch: 80 },
             { p: 3, nome: "Currículos e Programas", ch: 80 },
             { p: 3, nome: "Psicomotricidade", ch: 80 },
             { p: 3, nome: "Didática", ch: 80 },
+            
             { p: 4, nome: "Fundamentos e Prática da Educação Infantil", ch: 80 },
             { p: 4, nome: "Tema Integrador ou Optativa (4º)", ch: 80 },
             { p: 4, nome: "Metodologia da Pesquisa em Educação", ch: 80 },
             { p: 4, nome: "Neurociência e Problemas de Aprendizagem", ch: 80 },
+            
             { p: 5, nome: "Educação de Jovens e Adultos (EJA)", ch: 80 },
             { p: 5, nome: "Fund. e Prát. do Ensino da Língua Portuguesa", ch: 80 },
             { p: 5, nome: "Fund. e Prát. de Alfabetização", ch: 80 },
             { p: 5, nome: "Política e Legislação Educacional", ch: 80 },
             { p: 5, nome: "Estágio Supervisionado Obrigatório I", ch: 100 },
+            
             { p: 6, nome: "Fund. e Prát. Ensino de História e Geografia", ch: 80 },
             { p: 6, nome: "Fund. e Prát. Ensino de Matemática", ch: 80 },
             { p: 6, nome: "Fund. e Prát. Ensino de Ed. Física, Recr. e Jogos", ch: 80 },
             { p: 6, nome: "Gestão Educacional", ch: 80 },
             { p: 6, nome: "Estágio Supervisionado Obrigatório II", ch: 100 },
+            
             { p: 7, nome: "Fund. e Prát. Ensino de Arte-Educação", ch: 80 },
             { p: 7, nome: "Fund. e Prát. Ensino de Ciências", ch: 80 },
             { p: 7, nome: "Educação Especial", ch: 80 },
             { p: 7, nome: "Educação do Campo e Desenv. Sustentável", ch: 80 },
             { p: 7, nome: "Estágio Supervisionado Obrigatório III", ch: 100 },
             { p: 7, nome: "Avaliação da Aprendizagem", ch: 80 },
+            
             { p: 8, nome: "Atividades Complementares", ch: 200 },
             { p: 8, nome: "Tema Integrador ou Optativa (8º)", ch: 80 },
             { p: 8, nome: "TCC-Monografia", ch: 160 },
@@ -483,8 +497,6 @@
             "Profª. Drª Márcia Moret",
             "Prof. Dr. Luciano Magalhães",
             "Prof. Dr. Hugo Fotopoulos",
-            "Prof. Dr. Rodrigo Moreira", 
-            "Profª. Drª. Cimene Rissardo",
             "Prof. Substituto"
         ];
 
@@ -540,7 +552,7 @@
         for (let i = 1; i <= 8; i++) {
             const tr = document.createElement('tr');
             tr.dataset.period = i;
-            tr.innerHTML = `<td>${i}º Período</td>`;
+            tr.innerHTML = `<td>${i}º</td>`; 
             for(let j=0; j<6; j++){
                 const td = document.createElement('td');
                 td.className = 'schedule-cell';
@@ -806,6 +818,125 @@
             XLSX.writeFile(wb, "Horarios_Pedagogia_UNIR.xlsx");
         }
 
+        // ==========================================
+        // LÓGICA DE EXPORTAÇÃO PARA PDF (jsPDF)
+        // ==========================================
+        async function exportToPDF() {
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({ orientation: "landscape" });
+
+                let semesterLabel = "Todos os Períodos";
+                const activeBtn = document.querySelector('.filter-btn.btn-tab.active');
+                if(activeBtn) semesterLabel = activeBtn.innerText;
+
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(14);
+                
+                try {
+                    const imgData = await getBase64ImageFromUrl('assets/logo_unir.png');
+                    if(imgData) {
+                        doc.addImage(imgData, 'PNG', 14, 10, 20, 25);
+                    }
+                } catch(e) {
+                    console.log("Logo não encontrada em 'assets/logo_unir.png'. Prosseguindo sem logo.");
+                }
+
+                doc.text("MINISTÉRIO DA EDUCAÇÃO", 140, 15, {align: "center"});
+                doc.text("FUNDAÇÃO UNIVERSIDADE FEDERAL DE RONDÔNIA - UNIR", 140, 22, {align: "center"});
+                doc.text("CURSO DE PEDAGOGIA - ARIQUEMES", 140, 29, {align: "center"});
+                doc.text("ATRIBUIÇÃO DE DISCIPLINAS E HORÁRIO DE AULAS", 140, 36, {align: "center"});
+                
+                doc.setFontSize(11);
+                doc.setFont("helvetica", "normal");
+                doc.text(`Visualização: ${semesterLabel}`, 140, 43, {align: "center"});
+
+                const tableData = [];
+                const rows = document.querySelectorAll('#grid-body tr');
+                
+                rows.forEach(row => {
+                    if (row.style.display !== 'none') {
+                        const rowData = [];
+                        rowData.push(row.querySelector('td').innerText.trim());
+                        
+                        const cells = row.querySelectorAll('.schedule-cell');
+                        cells.forEach(cell => {
+                            const discs = Array.from(cell.querySelectorAll('.chip.discipline')).map(c => c.dataset.name);
+                            const chs = Array.from(cell.querySelectorAll('.chip.discipline')).map(c => c.dataset.ch);
+                            const profs = Array.from(cell.querySelectorAll('.chip.teacher')).map(c => c.dataset.name);
+                            
+                            let cellContent = "";
+                            if(discs.length > 0) {
+                                for(let k=0; k<discs.length; k++){
+                                    cellContent += discs[k] + "\n(" + chs[k] + "H)";
+                                    if(k < discs.length - 1) cellContent += "\n\n";
+                                }
+                            }
+                            if(profs.length > 0) {
+                                cellContent += "\n" + profs.join("\n");
+                            }
+                            rowData.push(cellContent.trim());
+                        });
+                        tableData.push(rowData);
+                    }
+                });
+
+                doc.autoTable({
+                    startY: 50,
+                    head: [["PERÍODO", "2ª FEIRA", "3ª FEIRA", "4ª FEIRA", "5ª FEIRA", "6ª FEIRA", "SÁBADO"]],
+                    body: tableData,
+                    theme: 'grid',
+                    headStyles: { 
+                        fillColor: [230, 230, 230], 
+                        textColor: [0, 0, 0],
+                        halign: 'center',
+                        valign: 'middle',
+                        fontStyle: 'bold',
+                        lineWidth: 0.1,
+                        lineColor: [0, 0, 0]
+                    },
+                    bodyStyles: {
+                        lineWidth: 0.1,
+                        lineColor: [0, 0, 0],
+                        valign: 'middle',
+                        halign: 'center',
+                        fontSize: 9
+                    },
+                    columnStyles: {
+                        0: { fontStyle: 'bold', halign: 'center', cellWidth: 20 }
+                    },
+                    styles: {
+                        overflow: 'linebreak',
+                        cellPadding: 3
+                    }
+                });
+
+                doc.save(`Horarios_Pedagogia_${semesterLabel.replace(/\s+/g, '_')}.pdf`);
+            } catch (error) {
+                console.error("Erro ao gerar PDF:", error);
+                alert("Erro ao gerar PDF. Verifique o console do navegador.");
+            }
+        }
+
+        function getBase64ImageFromUrl(imageUrl) {
+            return new Promise((resolve, reject) => {
+                var img = new Image();
+                img.setAttribute('crossOrigin', 'anonymous');
+                img.onload = () => {
+                    var canvas = document.createElement("canvas");
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    var ctx = canvas.getContext("2d");
+                    ctx.drawImage(img, 0, 0);
+                    var dataURL = canvas.toDataURL("image/png");
+                    resolve(dataURL);
+                };
+                img.onerror = error => reject(error);
+                img.src = imageUrl;
+            });
+        }
+
+        // --- Lógica de Salvamento e Exportação de Progresso (.json) ---
         let saveTimeout;
         
         function saveToLocalStorage() {
