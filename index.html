@@ -836,7 +836,7 @@
                 try {
                     const imgData = await getBase64ImageFromUrl('assets/logo_unir.png');
                     if(imgData) {
-                        doc.addImage(imgData, 'PNG', 14, 10, 20, 25);
+                        doc.addImage(imgData, 'PNG', 14, 14, 20, 25);
                     }
                 } catch(e) {
                     console.log("Logo não encontrada em 'assets/logo_unir.png'. Prosseguindo sem logo.");
