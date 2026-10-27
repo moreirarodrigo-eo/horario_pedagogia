@@ -14,14 +14,12 @@
     
     <style>
         :root {
-            /* Paleta de Cores Elegantes & Pastéis */
             --bg-page: #f8fafc;
             --bg-panel: #ffffff;
             --text-main: #334155;
             --text-muted: #64748b;
             --border-color: #e2e8f0;
             
-            /* Tons Pastéis para Botões e Chips */
             --pastel-mint: #d1fae5;
             --text-mint: #065f46;
             
@@ -119,7 +117,6 @@
             box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         }
 
-        /* Cores Específicas dos Botões */
         .btn-tab { border: 1px solid var(--border-color); }
         .btn-tab.active { background: var(--text-main); color: white; border-color: var(--text-main); }
         
@@ -344,8 +341,8 @@
     
     <div class="controls-top">
         <button id="btn-all" class="filter-btn btn-tab active" onclick="filterSemester('all')">Todos os Períodos</button>
-        <button id="btn-impar" class="filter-btn btn-tab" onclick="filterSemester('impar')">Semestre Ímpar (1º, 3º, 5º, 7º)</button>
-        <button id="btn-par" class="filter-btn btn-tab" onclick="filterSemester('par')">Semestre Par (2º, 4º, 6º, 8º)</button>
+        <button id="btn-impar" class="filter-btn btn-tab" onclick="filterSemester('impar')">Semestre Ímpar</button>
+        <button id="btn-par" class="filter-btn btn-tab" onclick="filterSemester('par')">Semestre Par</button>
         
         <div class="divider"></div>
         
@@ -836,7 +833,7 @@
                 try {
                     const imgData = await getBase64ImageFromUrl('assets/logo_unir.png');
                     if(imgData) {
-                        doc.addImage(imgData, 'PNG', 14, 14, 20, 25);
+                        doc.addImage(imgData, 'PNG', 14, 10, 20, 25);
                     }
                 } catch(e) {
                     console.log("Logo não encontrada em 'assets/logo_unir.png'. Prosseguindo sem logo.");
@@ -910,6 +907,60 @@
                         cellPadding: 3
                     }
                 });
+
+                let finalY = doc.lastAutoTable.finalY || 50;
+                
+                const summaryData = [];
+                const summaryRows = document.querySelectorAll('#summary-body tr');
+                summaryRows.forEach(row => {
+                    const cols = row.querySelectorAll('td');
+                    if (cols.length === 3 && !cols[0].hasAttribute('colspan')) {
+                        const docente = cols[0].innerText.trim();
+                        const disciplinas = cols[1].innerText.trim(); 
+                        const ch = cols[2].innerText.trim();
+                        summaryData.push([docente, disciplinas, ch]);
+                    }
+                });
+
+                if (summaryData.length > 0) {
+                    if (finalY > doc.internal.pageSize.height - 40) {
+                        doc.addPage();
+                        finalY = 20;
+                    } else {
+                        finalY += 15; 
+                    }
+
+                    doc.setFontSize(12);
+                    doc.setFont("helvetica", "bold");
+                    doc.text("Resumo por Docente", 14, finalY);
+
+                    doc.autoTable({
+                        startY: finalY + 5,
+                        head: [["Docente", "Disciplinas Alocadas", "Carga Horária Total (CH)"]],
+                        body: summaryData,
+                        theme: 'grid',
+                        headStyles: {
+                            fillColor: [230, 230, 230],
+                            textColor: [0, 0, 0],
+                            fontStyle: 'bold',
+                            lineWidth: 0.1,
+                            lineColor: [0, 0, 0]
+                        },
+                        bodyStyles: {
+                            lineWidth: 0.1,
+                            lineColor: [0, 0, 0],
+                            valign: 'middle',
+                            fontSize: 10
+                        },
+                        columnStyles: {
+                            2: { fontStyle: 'bold', halign: 'center', cellWidth: 40 }
+                        },
+                        styles: {
+                            overflow: 'linebreak',
+                            cellPadding: 3
+                        }
+                    });
+                }
 
                 doc.save(`Horarios_Pedagogia_${semesterLabel.replace(/\s+/g, '_')}.pdf`);
             } catch (error) {
