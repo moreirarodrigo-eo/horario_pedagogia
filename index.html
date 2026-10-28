@@ -908,10 +908,10 @@
                     }
                 });
 
-                let finalY = doc.lastAutoTable.finalY || 50;
-                
+                // NOVO: Adicionando a Tabela de Resumo em uma Nova Página
                 const summaryData = [];
                 const summaryRows = document.querySelectorAll('#summary-body tr');
+                
                 summaryRows.forEach(row => {
                     const cols = row.querySelectorAll('td');
                     if (cols.length === 3 && !cols[0].hasAttribute('colspan')) {
@@ -923,19 +923,14 @@
                 });
 
                 if (summaryData.length > 0) {
-                    if (finalY > doc.internal.pageSize.height - 40) {
-                        doc.addPage();
-                        finalY = 20;
-                    } else {
-                        finalY += 15; 
-                    }
-
-                    doc.setFontSize(12);
+                    doc.addPage();
+                    
+                    doc.setFontSize(14);
                     doc.setFont("helvetica", "bold");
-                    doc.text("Resumo por Docente", 14, finalY);
+                    doc.text("Carga Horária por Docente", 140, 20, {align: "center"});
 
                     doc.autoTable({
-                        startY: finalY + 5,
+                        startY: 30,
                         head: [["Docente", "Disciplinas Alocadas", "Carga Horária Total (CH)"]],
                         body: summaryData,
                         theme: 'grid',
@@ -957,7 +952,7 @@
                         },
                         styles: {
                             overflow: 'linebreak',
-                            cellPadding: 3
+                            cellPadding: 4
                         }
                     });
                 }
